@@ -1,3 +1,4 @@
+import base64
 import math
 import threading
 import time
@@ -24,6 +25,7 @@ st.set_page_config(
 )
 
 BASE_DIR = Path(__file__).parent
+LOGO_PATH = BASE_DIR / "assets" / "logo.png"
 
 RTC_CONFIGURATION = RTCConfiguration(
     {
@@ -37,6 +39,13 @@ RTC_CONFIGURATION = RTCConfiguration(
 @st.cache_resource
 def load_predictor():
     return SignLanguagePredictor(confidence_threshold=0.2)
+
+
+@st.cache_data
+def base64_logo():
+    if LOGO_PATH.exists():
+        return base64.b64encode(LOGO_PATH.read_bytes()).decode()
+    return ""
 
 
 # =========================
@@ -291,39 +300,36 @@ st.markdown(
         padding-right: 1rem;
     }
 
-    .brand-logo-box {
-        width: 90px;
-        height: 90px;
-        margin: 0 auto 14px auto;
-        border-radius: 50%;
+    .logo-image-wrap {
+        width: 100%;
         display: flex;
-        align-items: center;
         justify-content: center;
-        position: relative;
-        background: linear-gradient(145deg, #ffffff, #ffe9dd);
-        border: 3px solid var(--chocolate-kisses);
-        box-shadow:
-            0 12px 26px rgba(69,21,27,0.25),
-            inset 0 3px 6px rgba(255,255,255,0.6),
-            inset 0 -3px 6px rgba(0,0,0,0.08);
-        animation: logoFloat 2.6s ease-in-out infinite;
+        align-items: center;
+        margin: 0 auto 14px auto;
     }
 
-    .brand-logo-box::after {
-        content: "";
-        position: absolute;
-        top: 6px;
-        left: 10px;
-        width: 60%;
-        height: 35%;
-        border-radius: 50%;
-        background: radial-gradient(
-            ellipse at center,
-            rgba(255,255,255,0.9),
-            rgba(255,255,255,0)
-        );
-        opacity: 0.7;
-        pointer-events: none;
+    .logo-image-box {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #BF4F51;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: logoFloat 2.6s ease-in-out infinite;
+    box-shadow:
+        0 10px 18px rgba(191,21,27,0.22),
+        0 0 0 3px rgba(255,255,255,0.08),
+        0 0 16px rgba(191,79,81,0.35)
+    }
+
+    .logo-image-box img {
+        width: 140%;
+        height: 140%;
+        object-fit: cover;
+        display: block;
+        transform: translateY(10px);
+        transform: translateX(-1.4px);
     }
 
     .top-brand {
@@ -334,18 +340,6 @@ st.markdown(
         box-shadow: 0 12px 28px rgba(69,21,27,0.18);
         margin-bottom: 12px;
         text-align: center;
-    }
-
-    .brand-letter {
-        text-align: center;
-        font-size: 3.8rem;
-        line-height: 1;
-        color: var(--bittersweet-shimmer);
-        font-family: 'UnifrakturCook', serif;
-        -webkit-text-stroke: 0.8px black;
-        text-shadow: 0 2px 6px rgba(0,0,0,0.35);
-        user-select: none;
-        transform: translateY(-1px);
     }
 
     .brand-title {
@@ -794,19 +788,14 @@ st.markdown(
             font-size: 1.7rem;
         }
 
-        .brand-logo-box {
-            width: 84px;
-            height: 84px;
-            margin-bottom: 12px;
-        }
-
-        .brand-letter {
-            font-size: 3.45rem;
-        }
-
         video {
             width: 84% !important;
             max-width: 300px !important;
+        }
+
+        .logo-image-box {
+            width: 90px;
+            height: 90px;
         }
     }
 </style>
@@ -853,12 +842,20 @@ class VideoProcessor(VideoProcessorBase):
 # =========================
 # Header
 # =========================
+if LOGO_PATH.exists():
+    st.markdown(
+        f"""
+        <div class="logo-image-wrap">
+            <div class="logo-image-box">
+                <img src="data:image/png;base64,{base64_logo()}" alt="Linguista logo">
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 st.markdown(
     """
-    <div class="brand-logo-box">
-        <div class="brand-letter">L</div>
-    </div>
-
     <div class="top-brand">
         <div class="brand-title">Linguista 🤲</div>
         <div class="brand-sub">Practice sign language in a playful, mobile-friendly way.</div>
