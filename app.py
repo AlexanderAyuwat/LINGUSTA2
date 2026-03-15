@@ -1051,7 +1051,7 @@ elif st.session_state.page == "stage":
             is_confident = result.get("is_confident", False)
 
             elapsed = time.time() - st.session_state.stage_start_time
-            time_left = max(0, math.ceil(10 - elapsed))
+            time_left = max(0, math.ceil(30 - elapsed))
 
             if (
                 str(detected_sign).strip().lower() == str(target_sign).strip().lower()
@@ -1064,7 +1064,7 @@ elif st.session_state.page == "stage":
                 ]
                 st.rerun()
 
-            elif elapsed >= 10:
+            elif elapsed >= 30:
                 st.session_state.stage_status = "failed"
                 st.session_state.stage_feedback = FAIL_MESSAGES[
                     st.session_state.stage_index % len(FAIL_MESSAGES)
