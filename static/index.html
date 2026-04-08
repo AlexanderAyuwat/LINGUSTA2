@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Linguista – Learn Sign Language</title>
+  <meta name="description" content="Learn sign language with AI-powered real-time webcam detection." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & tokens ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Warm red palette (from user's swatch) */
+      --primary:        #9e5e6a;
+      --primary-dark:   #7a4550;
+      --primary-light:  #c47e8a;
+      --peach:          #e8a090;
+      --cream:          #f5e4c8;
+
+      /* Surfaces */
+      --bg:             #fefaf7;
+      --surface:        #ffffff;
+      --border:         #e8d8d5;
+      --border-strong:  #c9aeb2;
+
+      /* Text */
+      --text:           #3d2b30;
+      --text-muted:     #9e8490;
+
+      /* Feedback */
+      --green:          #58cc02;
+      --green-dark:     #3a8a00;
+      --green-bg:       #d7ffb8;
+      --red-bg:         #fce8ea;
+
+      /* Misc */
+      --radius-card:    18px;
+      --radius-btn:     14px;
+      --shadow-btn:     0 5px 0;
+    }
+
+    html, body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── App shell ──────────────────────────────────────────────────────────── */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ── Top bar ────────────────────────────────────────────────────────────── */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 2px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--text);
+      min-width: 60px;
+    }
+    .stat:last-child { justify-content: flex-end; }
+    .stat-icon { font-size: 1.2rem; }
+
+    .lang-toggle {
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .lang-toggle:active { transform: scale(0.95); }
+
+    .logo {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--primary);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+    }
+
+    /* ── Progress bar row ───────────────────────────────────────────────────── */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .close-btn:hover { background: var(--border); }
+
+    .prog-track {
+      flex: 1;
+      height: 16px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 99px;
+      transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── Page wrapper ───────────────────────────────────────────────────────── */
+    .page {
+      padding: 24px 20px 36px;
+      flex: 1;
+      animation: fadeSlide 0.22s ease both;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Buttons ────────────────────────────────────────────────────────────── */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
+      border-radius: var(--radius-btn);
+      border: none;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      text-align: center;
+      text-decoration: none;
+    }
+    .btn + .btn { margin-top: 12px; }
+
+    .btn:active { transform: translateY(4px) !important; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: var(--shadow-btn) var(--primary-dark);
+    }
+    .btn-primary:active { box-shadow: 0 1px 0 var(--primary-dark); }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--text-muted);
+      border: 2px solid var(--border);
+      box-shadow: var(--shadow-btn) var(--border);
+    }
+    .btn-ghost:active { box-shadow: 0 1px 0 var(--border); }
+
+    .btn-success {
+      background: var(--green);
+      color: #fff;
+      box-shadow: var(--shadow-btn) var(--green-dark);
+    }
+    .btn-success:active { box-shadow: 0 1px 0 var(--green-dark); }
+
+    /* ── Section label ──────────────────────────────────────────────────────── */
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Streak banner (home) ───────────────────────────────────────────────── */
+    .streak-banner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: linear-gradient(135deg, #fce8e9 0%, #fdf3f0 100%);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 18px 20px;
+      margin-bottom: 28px;
+    }
+
+    .streak-num {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--primary);
+      line-height: 1;
+    }
+
+    .streak-texts { flex: 1; }
+    .streak-title { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .streak-val   { font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+
+    .xp-bubble {
+      background: var(--primary);
+      color: #fff;
+      border-radius: 99px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* ── Lesson cards (home) ────────────────────────────────────────────────── */
+    .lesson-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      border-radius: var(--radius-card);
+      border: 2px solid var(--border);
+      background: var(--surface);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .lesson-card:active { transform: scale(0.98); }
+
+    .lesson-card.lc-active   { border-color: var(--primary); box-shadow: 0 4px 0 var(--border); }
+    .lesson-card.lc-done     { border-color: var(--green); background: #f7fff0; }
+    .lesson-card.lc-locked   { opacity: 0.5; cursor: default; filter: grayscale(0.4); }
+
+    .lc-icon {
+      width: 50px; height: 50px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .lc-icon.ic-active  { background: #fce8ea; }
+    .lc-icon.ic-done    { background: #e3f8d0; }
+    .lc-icon.ic-locked  { background: #ede3e5; }
+
+    .lc-body { flex: 1; }
+    .lc-unit  { font-size: 0.73rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 2px; }
+    .lc-title { font-size: 0.98rem; font-weight: 800; color: var(--text); }
+
+    .lc-arrow { font-size: 1.3rem; color: var(--text-muted); flex-shrink: 0; }
+
+    .divider { border: none; height: 2px; background: var(--border); border-radius: 99px; margin: 24px 0; }
+
+    /* ── Lesson step pages ──────────────────────────────────────────────────── */
+    .step-kicker {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .target-word {
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--primary);
+      text-align: center;
+      letter-spacing: -0.5px;
+      margin-bottom: 28px;
+      line-height: 1;
+    }
+
+    /* ── Video / camera wrapper ─────────────────────────────────────────────── */
+    .media-wrap {
+      background: #1c1217;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      aspect-ratio: 4 / 3;
+      position: relative;
+    }
+
+    .media-wrap video {
+      width: 100%; height: 100%;
+      display: block;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .media-wrap canvas { display: none; }
+
+    /* camera permission overlay */
+    .cam-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px;
+      background: #1c1217;
+      color: var(--cream);
+    }
+    .cam-overlay .cam-icon { font-size: 2.5rem; }
+    .cam-overlay p { font-size: 0.88rem; font-weight: 700; color: #bfb0b5; text-align: center; padding: 0 20px; }
+
+    /* ── Detection card ─────────────────────────────────────────────────────── */
+    .detection-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 16px 18px;
+      margin-bottom: 20px;
+    }
+
+    .det-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .det-value {
+      font-size: 1.7rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .conf-bar {
+      margin-top: 10px;
+      height: 8px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .conf-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 99px;
+      transition: width 0.25s ease;
+    }
+
+    /* ── Live dot ───────────────────────────────────────────────────────────── */
+    .live-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .live-text {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    /* ── Skip link ──────────────────────────────────────────────────────────── */
+    .skip-link {
+      display: block;
+      text-align: center;
+      color: var(--text-muted);
+      font-weight: 800;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 18px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .skip-link:hover { color: var(--text); }
+
+    /* ── Feedback panel ─────────────────────────────────────────────────────── */
+    .feedback-panel {
+      border-radius: var(--radius-card);
+      padding: 22px 20px;
+      margin-bottom: 24px;
+      border: 2px solid transparent;
+    }
+
+    .feedback-panel.fp-correct {
+      background: var(--green-bg);
+      border-color: var(--green);
+    }
+
+    .feedback-panel.fp-wrong {
+      background: var(--red-bg);
+      border-color: var(--primary-light);
+    }
+
+    .fp-heading {
+      font-size: 1.35rem;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .fp-correct .fp-heading { color: var(--green-dark); }
+    .fp-wrong   .fp-heading { color: var(--primary-dark); }
+
+    .fp-sub {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .xp-tag {
+      display: inline-block;
+      margin-top: 10px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 99px;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    /* ── Practice back btn ──────────────────────────────────────────────────── */
+    .back-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .round-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .round-btn:hover { background: var(--border); }
+
+    .back-title { font-size: 1.1rem; font-weight: 800; }
+
+    /* ── Util ───────────────────────────────────────────────────────────────── */
+    .mt-12 { margin-top: 12px; }
+    .mt-20 { margin-top: 20px; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════════════════ */
+const state = {
+  lang:           localStorage.getItem('lng_lang') || 'en',
+  page:           'home',    // home | lesson-intro | lesson-active | lesson-feedback | practice
+  xp:             parseInt(localStorage.getItem('lng_xp')     || '0'),
+  streak:         parseInt(localStorage.getItem('lng_streak') || '3'),
+  furthestLesson: parseInt(localStorage.getItem('lng_max')    || '0'),
+  currentLesson:  0,
+  feedbackResult: null,      // 'correct' | 'wrong'
+  ws:             null,
+  stream:         null,
+  frameTimer:     null,
+  checkLocked:    false,
+};
+
+const TEXT = {
+  day_streak: { en: "Day Streak", th: "สตรีคประจำวัน" },
+  keep_going: { en: "Keep going!", th: "สู้ต่อไป!" },
+  your_course: { en: "Your Course", th: "คอร์สของคุณ" },
+  extra: { en: "Extra", th: "เพิ่มเติม" },
+  freestyle: { en: "Freestyle", th: "โหมดอิสระ" },
+  practice_mode: { en: "Practice Mode", th: "โหมดฝึกซ้อม" },
+  sign: { en: "Sign", th: "คำศัพท์" },
+  watch_learn: { en: "Watch & Learn", th: "ดูและเรียนรู้" },
+  lets_try: { en: "Let's Try It", th: "มาลองฝึกกันเลย" },
+  sign_this_word: { en: "Sign this word", th: "แสดงท่าสำหรับคำนี้" },
+  camera_live: { en: "Camera live", th: "กล้องทำงานอยู่" },
+  starting_camera: { en: "Starting camera…", th: "กำลังเปิดกล้อง…" },
+  cam_denied: { en: "Camera access denied. Please allow access and reload.", th: "ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตและโหลดหน้าใหม่" },
+  detected_sign: { en: "Detected sign", th: "ท่าตรวจพบ" },
+  starting: { en: "Starting…", th: "กำลังเริ่ม…" },
+  collecting: { en: "Collecting", th: "กำลังเก็บข้อมูล" },
+  hold_clearly: { en: "Hold your sign clearly in frame", th: "แสดงท่าทางให้ชัดเจนบริเวณจอ" },
+  skip_sign: { en: "Skip this sign", th: "ข้ามท่านี้" },
+  correct: { en: "Correct!", th: "ถูกต้อง!" },
+  not_quite: { en: "Not quite.", th: "ยังไม่ใช่" },
+  signed_success: { en: "You signed <strong>{target}</strong> successfully.", th: "คุณทำท่า <strong>{target}</strong> ได้สำเร็จ" },
+  watch_again: { en: "Watch the clip again and keep practicing.", th: "ดูตัวอย่างอีกครั้งแล้วฝึกต่อไป" },
+  finish_course: { en: "Finish Course", th: "จบคอร์ส" },
+  continue: { en: "Continue", th: "ทำต่อไป" },
+  try_again: { en: "Try Again", th: "ลองอีกครั้ง" },
+  back_to_home: { en: "Back to Home", th: "กลับหน้าหลัก" },
+};
+
+function t(key, target='') {
+  let str = TEXT[key][state.lang] || TEXT[key]['en'];
+  return str.replace('{target}', target);
+}
+
+const LESSONS = [
+  {
+    id: 'Hungry',
+    unit: { en: 'Unit 1 · Basics', th: 'บทที่ 1 · พื้นฐาน' },
+    title: { en: 'Hungry', th: 'หิว' },
+    mp4: '/static/videos/hungry.mp4',
+  },
+  {
+    id: 'Sleepy',
+    unit: { en: 'Unit 2 · Feelings', th: 'บทที่ 2 · ความรู้สึก' },
+    title: { en: 'Sleepy', th: 'ง่วงนอน' },
+    mp4: '/static/videos/sleepy.mp4',
+  },
+  {
+    id: 'Drink',
+    unit: { en: 'Unit 3 · Actions', th: 'บทที่ 3 · การกระทำ' },
+    title: { en: 'Drink', th: 'ดื่ม' },
+    mp4: '/static/videos/drink.mp4',
+  },
+  {
+    id: 'Yes',
+    unit: { en: 'Unit 4 · Affirmations', th: 'บทที่ 4 · การยืนยัน' },
+    title: { en: 'Yes', th: 'ใช่' },
+    mp4: '/static/videos/yes.mp4',
+  },
+];
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PERSISTENCE
+═══════════════════════════════════════════════════════════════════════════ */
+function save() {
+  localStorage.setItem('lng_lang',   state.lang);
+  localStorage.setItem('lng_xp',     state.xp);
+  localStorage.setItem('lng_streak', state.streak);
+  localStorage.setItem('lng_max',    state.furthestLesson);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════════════════════════ */
+window.toggleLang = () => {
+  state.lang = state.lang === 'en' ? 'th' : 'en';
+  save();
+  render();
+};
+
+function go(page, opts = {}) {
+  cleanupMedia();
+  state.page         = page;
+  state.checkLocked  = false;
+  if (opts.lesson       !== undefined) state.currentLesson  = opts.lesson;
+  if (opts.feedback     !== undefined) state.feedbackResult = opts.feedback;
+  render();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEDIA / WEBSOCKET
+═══════════════════════════════════════════════════════════════════════════ */
+function cleanupMedia() {
+  if (state.frameTimer) { clearInterval(state.frameTimer); state.frameTimer = null; }
+  if (state.stream)     { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
+  if (state.ws)         { state.ws.close(); state.ws = null; }
+}
+
+async function startCamera(videoEl) {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+    videoEl.srcObject = stream;
+    await videoEl.play();
+    state.stream = stream;
+    return true;
+  } catch (e) {
+    console.warn('Camera error:', e);
+    return false;
+  }
+}
+
+function openWebSocket(onMessage) {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws    = new WebSocket(`${proto}//${location.host}/ws/predict`);
+  ws.onmessage = e => {
+    try { onMessage(JSON.parse(e.data)); } catch {}
+  };
+  ws.onerror   = () => console.warn('WS error');
+  state.ws     = ws;
+}
+
+function startFrameLoop(videoEl, canvas) {
+  const ctx = canvas.getContext('2d');
+  state.frameTimer = setInterval(() => {
+    if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+    if (videoEl.readyState < 2) return;
+    canvas.width  = 320;
+    canvas.height = 240;
+    ctx.drawImage(videoEl, 0, 0, 320, 240);
+    state.ws.send(canvas.toDataURL('image/jpeg', 0.65));
+  }, 150); // ~7 fps
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AFTER-RENDER HOOKS
+═══════════════════════════════════════════════════════════════════════════ */
+function afterRender() {
+  if (state.page === 'lesson-active' || state.page === 'practice') {
+    _bootCamera();
+  }
+}
+
+async function _bootCamera() {
+  const video      = document.getElementById('cam-video');
+  const canvas     = document.getElementById('cam-canvas');
+  const detVal     = document.getElementById('det-value');
+  const confFill   = document.getElementById('conf-fill');
+  const camOverlay = document.getElementById('cam-overlay');
+
+  if (!video || !canvas) return;
+
+  const ok = await startCamera(video);
+
+  if (!ok) {
+    if (camOverlay) {
+      camOverlay.innerHTML = `<div class="cam-icon">📷</div><p>${t('cam_denied')}</p>`;
+      camOverlay.style.display = 'flex';
+    }
+    return;
+  }
+
+  // Hide overlay once camera is live
+  if (camOverlay) camOverlay.style.display = 'none';
+
+  const targetSign = state.page === 'lesson-active'
+    ? LESSONS[state.currentLesson].id.toLowerCase()
+    : null;
+
+  openWebSocket(result => {
+    const label    = result.display_label || result.prediction || '—';
+    const conf     = Math.min(parseFloat(result.confidence) || 0, 1.0);
+    const frames   = parseInt(result.frames_collected) || 0;
+    const needed   = parseInt(result.frames_needed)    || 45;
+    const ready    = frames >= needed;
+
+    if (detVal) {
+      // Show warmup progress until model has enough frames
+      detVal.textContent = ready ? label : `${t('collecting')} ${frames}/${needed}`;
+    }
+    if (confFill) {
+      confFill.style.width = ready
+        ? `${(conf * 100).toFixed(0)}%`
+        : `${Math.round((frames / needed) * 100)}%`;
+    }
+
+    // Auto-correct detection
+    if (targetSign && !state.checkLocked && ready) {
+      if (result.is_confident && conf >= 0.70 && label.toLowerCase() === targetSign) {
+        state.checkLocked = true;
+        setTimeout(() => _triggerFeedback(true), 700);
+      }
+    }
+  });
+
+  // Start sending frames immediately (video.play() already resolved above,
+  // so loadeddata has already fired — don't rely on the event alone).
+  startFrameLoop(video, canvas);
+  // Belt-and-suspenders: also hook the event in case play resolved early.
+  video.addEventListener('loadeddata', () => {
+    if (!state.frameTimer) startFrameLoop(video, canvas);
+  }, { once: true });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACTIONS
+═══════════════════════════════════════════════════════════════════════════ */
+function _triggerFeedback(success) {
+  if (success) {
+    state.xp += 15;
+    const next = state.currentLesson + 1;
+    if (next > state.furthestLesson) state.furthestLesson = next;
+    if (state.furthestLesson > LESSONS.length) state.furthestLesson = LESSONS.length;
+    save();
+  }
+  go('lesson-feedback', { feedback: success ? 'correct' : 'wrong' });
+}
+
+// Exposed to onclick attributes
+window.goHome         = ()    => go('home');
+window.startLesson    = (idx) => go('lesson-intro', { lesson: idx });
+window.goPractice     = ()    => go('practice');
+window.startActive    = ()    => go('lesson-active');
+window.skipSign       = ()    => _triggerFeedback(false);
+window.nextLesson     = ()    => {
+  const next = state.currentLesson + 1;
+  if (next < LESSONS.length) go('lesson-intro', { lesson: next });
+  else go('home');
+};
+window.retryLesson    = ()    => go('lesson-intro', { lesson: state.currentLesson });
+window.finishCourse   = ()    => { state.streak++; save(); go('home'); };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RENDERERS
+═══════════════════════════════════════════════════════════════════════════ */
+function $topBar() {
+  return `
+  <div class="top-bar">
+    <div class="stat"><span class="stat-icon">🔥</span>${state.streak}</div>
+    <div class="logo">Linguista</div>
+    <div class="stat">
+      <button class="lang-toggle" onclick="toggleLang()">${state.lang === 'en' ? 'EN' : 'TH'}</button>
+      <span style="width:8px"></span>
+      <span class="stat-icon">💎</span>${state.xp}
+    </div>
+  </div>`;
+}
+
+function $progressRow(pct) {
+  return `
+  <div class="progress-row">
+    <button class="close-btn" onclick="goHome()" aria-label="Close">✕</button>
+    <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function $cameraBlock() {
+  return `
+  <div class="media-wrap">
+    <video id="cam-video" autoplay playsinline muted></video>
+    <canvas id="cam-canvas"></canvas>
+    <div class="cam-overlay" id="cam-overlay" style="display:flex;">
+      <div class="cam-icon">📷</div>
+      <p>${t('starting_camera')}</p>
+    </div>
+  </div>`;
+}
+
+function $detectionCard() {
+  return `
+  <div class="detection-card">
+    <div class="det-label">${t('detected_sign')}</div>
+    <div class="det-value" id="det-value">${t('starting')}</div>
+    <div class="conf-bar"><div class="conf-fill" id="conf-fill" style="width:0%"></div></div>
+    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;font-weight:700;" id="det-hint">${t('hold_clearly')}</div>
+  </div>`;
+}
+
+// ── HOME ─────────────────────────────────────────────────────────────────────
+function renderHome() {
+  const cards = LESSONS.map((l, i) => {
+    const done   = i < state.furthestLesson;
+    const active = i === state.furthestLesson;
+    const locked = i > state.furthestLesson;
+    const cls    = done ? 'lc-done' : active ? 'lc-active' : 'lc-locked';
+    const icCls  = done ? 'ic-done' : active ? 'ic-active' : 'ic-locked';
+    const icon   = done ? '✓' : active ? '▶' : '🔒';
+    const click  = locked ? '' : `onclick="startLesson(${i})"`;
+    return `
+    <div class="lesson-card ${cls}" ${click} role="${locked ? '' : 'button'}" tabindex="${locked ? -1 : 0}">
+      <div class="lc-icon ${icCls}">${icon}</div>
+      <div class="lc-body">
+        <div class="lc-unit">${l.unit[state.lang]}</div>
+        <div class="lc-title">${t('sign')}: ${l.title[state.lang]}</div>
+      </div>
+      <div class="lc-arrow">${locked ? '' : '›'}</div>
+    </div>`;
+  }).join('');
+
+  return `
+  ${$topBar()}
+  <div class="page">
+    <div class="streak-banner">
+      <div class="streak-num">🔥${state.streak}</div>
+      <div class="streak-texts">
+        <div class="streak-title">${t('day_streak')}</div>
+        <div class="streak-val">${t('keep_going')}</div>
+      </div>
+      <div class="xp-bubble">💎 ${state.xp} XP</div>
+    </div>
+
+    <div class="section-label">${t('your_course')}</div>
+    ${cards}
+
+    <hr class="divider">
+
+    <div class="section-label">${t('extra')}</div>
+    <div class="lesson-card lc-active" onclick="goPractice()" role="button" tabindex="0">
+      <div class="lc-icon ic-active">🎥</div>
+      <div class="lc-body">
+        <div class="lc-unit">${t('freestyle')}</div>
+        <div class="lc-title">${t('practice_mode')}</div>
+      </div>
+      <div class="lc-arrow">›</div>
+    </div>
+  </div>`;
+}
+
+// ── Sign Avatar SVG ───────────────────────────────────────────────────────────
+function makeSignSVG(target) {
+  const S  = '#e8c09a', SD = '#c09070', H = '#3d2b30';
+  const P  = '#9e5e6a', PD = '#7a4550';
+  const sx = 214, sy = 213; // right shoulder
+
+  const base = `
+    <ellipse cx="160" cy="280" rx="105" ry="130" fill="${P}" opacity="0.06"/>
+    <line x1="106" y1="215" x2="82"  y2="285" stroke="${SD}" stroke-width="14" stroke-linecap="round"/>
+    <line x1="106" y1="215" x2="82"  y2="285" stroke="${S}"  stroke-width="11" stroke-linecap="round"/>
+    <line x1="82"  y1="285" x2="78"  y2="350" stroke="${SD}" stroke-width="13" stroke-linecap="round"/>
+    <line x1="82"  y1="285" x2="78"  y2="350" stroke="${S}"  stroke-width="10" stroke-linecap="round"/>
+    <ellipse cx="78" cy="352" rx="15" ry="17" fill="${S}" stroke="${SD}" stroke-width="2"/>
+    <rect x="104" y="200" width="112" height="155" rx="22" fill="${PD}"/>
+    <rect x="108" y="198" width="106" height="152" rx="20" fill="${P}"/>
+    <rect x="114" y="198" width="34"  height="72"  rx="17" fill="rgba(255,255,255,0.08)"/>
+    <rect x="141" y="173" width="38"  height="30"  rx="5"  fill="${S}"/>
+    <ellipse cx="160" cy="97"  rx="52" ry="46" fill="${H}"/>
+    <circle  cx="160" cy="126" r="52"           fill="${S}" stroke="${SD}" stroke-width="1.5"/>
+    <ellipse cx="108" cy="126" rx="9" ry="12" fill="${S}" stroke="${SD}" stroke-width="1.5"/>
+    <ellipse cx="212" cy="126" rx="9" ry="12" fill="${S}" stroke="${SD}" stroke-width="1.5"/>
+    <path d="M110,110 Q109,160 112,192" stroke="${H}" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M210,110 Q211,160 208,192" stroke="${H}" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M131,113 Q140,109 149,113" stroke="${H}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M171,113 Q180,109 189,113" stroke="${H}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="140" cy="125" rx="8" ry="9" fill="${H}"/>
+    <ellipse cx="180" cy="125" rx="8" ry="9" fill="${H}"/>
+    <circle  cx="142" cy="122" r="2.5" fill="white"/>
+    <circle  cx="182" cy="122" r="2.5" fill="white"/>
+    <ellipse cx="160" cy="139" rx="4" ry="5" fill="${SD}"/>
+    <path d="M148,150 Q160,158 172,150" stroke="${SD}" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+
+  const signs = {
+    Hungry: {
+      dur:'3.5s',
+      ex:'234;229;229;229;234', ey:'277;252;258;258;277',
+      hx:'225;212;214;214;225', hy:'340;192;290;290;340',
+      kt:'0;0.15;0.50;0.70;1',
+      ks:'0.4 0 0.2 1;0.4 0 0.2 1;1 0 1 0;0.4 0 0.2 1',
+      ghost:`<line x1="${sx}" y1="${sy}" x2="229" y2="258" stroke="${P}" stroke-width="12" stroke-linecap="round" opacity="0.14"/>
+             <line x1="229" y1="258" x2="214" y2="290" stroke="${P}" stroke-width="10" stroke-linecap="round" opacity="0.14"/>
+             <ellipse cx="214" cy="290" rx="17" ry="19" fill="${P}" opacity="0.10"/>`,
+      arrow:`<path d="M202,215 L202,305" stroke="${P}" stroke-width="2.5" stroke-dasharray="6,5" stroke-linecap="round" opacity="0.55"/>
+             <polygon points="195,298 202,312 209,298" fill="${P}" opacity="0.65"/>`,
+      hand:'c',
+    },
+    Sleepy: {
+      dur:'3.5s',
+      ex:'234;213;213;234', ey:'277;215;215;277',
+      hx:'225;183;183;225', hy:'340;150;150;340',
+      kt:'0;0.35;0.70;1',
+      ks:'0.4 0 0.2 1;1 0 1 0;0.4 0 0.2 1',
+      ghost:'',
+      arrow:`<circle cx="168" cy="126" r="30" stroke="${P}" stroke-width="2" fill="none" stroke-dasharray="5,4" opacity="0.45">
+               <animate attributeName="r" values="28;33;28" dur="1.3s" repeatCount="indefinite"/>
+               <animate attributeName="opacity" values="0.45;0.15;0.45" dur="1.3s" repeatCount="indefinite"/>
+             </circle>`,
+      hand:'pinch',
+    },
+    Drink: {
+      dur:'3.5s',
+      ex:'234;234;218;218;234', ey:'277;265;235;235;277',
+      hx:'225;222;192;192;225', hy:'340;295;172;172;340',
+      kt:'0;0.12;0.45;0.70;1',
+      ks:'0.4 0 0.2 1;0.4 0 0.2 1;1 0 1 0;0.4 0 0.2 1',
+      ghost:`<line x1="${sx}" y1="${sy}" x2="218" y2="235" stroke="${P}" stroke-width="12" stroke-linecap="round" opacity="0.14"/>
+             <line x1="218" y1="235" x2="192" y2="172" stroke="${P}" stroke-width="10" stroke-linecap="round" opacity="0.14"/>
+             <ellipse cx="192" cy="172" rx="17" ry="19" fill="${P}" opacity="0.10"/>`,
+      arrow:`<path d="M248,290 Q260,225 242,175" stroke="${P}" stroke-width="2.5" fill="none" stroke-dasharray="6,5" stroke-linecap="round" opacity="0.55"/>
+             <polygon points="235,178 242,162 249,178" fill="${P}" opacity="0.65"/>`,
+      hand:'c',
+    },
+    Yes: {
+      dur:'2s',
+      ex:'229;229;229;229;229', ey:'258;258;258;258;258',
+      hx:'215;215;215;215;215', hy:'245;278;245;278;245',
+      kt:'0;0.25;0.50;0.75;1',
+      ks:'0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1',
+      ghost:'',
+      arrow:`<path d="M248,242 L248,281" stroke="${P}" stroke-width="2.5" opacity="0.55"/>
+             <polygon points="241,248 248,234 255,248" fill="${P}" opacity="0.65"/>
+             <polygon points="241,275 248,289 255,275" fill="${P}" opacity="0.65"/>`,
+      hand:'fist',
+    },
+  };
+
+  const d = signs[target] || signs['Hungry'];
+  const exA = d.ex.split(';'), eyA = d.ey.split(';');
+  const hxA = d.hx.split(';'), hyA = d.hy.split(';');
+
+  const handSVG = (type) => {
+    if (type === 'c') return `
+      <ellipse rx="18" ry="20" fill="${S}" stroke="${SD}" stroke-width="2.5">
+        <animate attributeName="cx" values="${d.hx}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="${d.hy}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      </ellipse>`;
+    if (type === 'fist') return `
+      <ellipse rx="16" ry="18" fill="${S}" stroke="${SD}" stroke-width="2.5">
+        <animate attributeName="cx" values="${d.hx}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="${d.hy}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      </ellipse>`;
+    return `
+      <ellipse rx="12" ry="14" fill="${S}" stroke="${SD}" stroke-width="2.5">
+        <animate attributeName="cx" values="${d.hx}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="${d.hy}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      </ellipse>`;
+  };
+
+  const arm = `
+    ${d.ghost}
+    ${d.arrow}
+    <line x1="${sx}" y1="${sy}" x2="${exA[0]}" y2="${eyA[0]}" stroke="${SD}" stroke-width="15" stroke-linecap="round">
+      <animate attributeName="x2" values="${d.ex}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="${d.ey}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+    </line>
+    <line x1="${sx}" y1="${sy}" x2="${exA[0]}" y2="${eyA[0]}" stroke="${S}" stroke-width="12" stroke-linecap="round">
+      <animate attributeName="x2" values="${d.ex}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="${d.ey}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+    </line>
+    <line x1="${exA[0]}" y1="${eyA[0]}" x2="${hxA[0]}" y2="${hyA[0]}" stroke="${SD}" stroke-width="14" stroke-linecap="round">
+      <animate attributeName="x1" values="${d.ex}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="y1" values="${d.ey}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="${d.hx}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="${d.hy}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+    </line>
+    <line x1="${exA[0]}" y1="${eyA[0]}" x2="${hxA[0]}" y2="${hyA[0]}" stroke="${S}" stroke-width="11" stroke-linecap="round">
+      <animate attributeName="x1" values="${d.ex}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="y1" values="${d.ey}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="${d.hx}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="${d.hy}" keyTimes="${d.kt}" dur="${d.dur}" calcMode="spline" keySplines="${d.ks}" repeatCount="indefinite"/>
+    </line>
+    ${handSVG(d.hand)}`;
+
+  return `<svg viewBox="0 0 320 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">
+    <rect width="320" height="420" fill="#fefaf7"/>
+    ${arm}
+    ${base}
+  </svg>`;
+}
+
+// ── LESSON INTRO ─────────────────────────────────────────────────────────────
+function renderLessonIntro() {
+  const l   = LESSONS[state.currentLesson];
+  const pct = Math.round((state.currentLesson / LESSONS.length) * 100);
+  const mediaBlock = l.mp4
+    ? `<video
+        src="${l.mp4}"
+        autoplay loop muted playsinline
+        style="width:100%;height:100%;object-fit:cover;display:block;"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='block';"
+      ></video>
+      <div style="display:none;width:100%;height:100%;">${makeSignSVG(l.id)}</div>`
+    : `${makeSignSVG(l.id)}`;
+
+  return `
+  ${$topBar()}
+  ${$progressRow(pct)}
+  <div class="page">
+    <div class="step-kicker">${t('watch_learn')}</div>
+    <div class="target-word">${l.title[state.lang]}</div>
+    <div class="media-wrap" style="background:#000;border:2px solid var(--border); overflow:hidden;">
+      ${mediaBlock}
+    </div>
+    <button class="btn btn-primary" onclick="startActive()">${t('lets_try')}</button>
+  </div>`;
+}
+
+// ── LESSON ACTIVE ─────────────────────────────────────────────────────────────
+function renderLessonActive() {
+  const l   = LESSONS[state.currentLesson];
+  const pct = Math.round(((state.currentLesson + 0.5) / LESSONS.length) * 100);
+
+  return `
+  ${$topBar()}
+  ${$progressRow(pct)}
+  <div class="page">
+    <div class="step-kicker">${t('sign_this_word')}</div>
+    <div class="target-word">${l.title[state.lang]}</div>
+    ${$cameraBlock()}
+    <div class="live-row"><div class="live-dot"></div><span class="live-text">${t('camera_live')}</span></div>
+    ${$detectionCard()}
+    <span class="skip-link" onclick="skipSign()">${t('skip_sign')}</span>
+  </div>`;
+}
+
+// ── LESSON FEEDBACK ───────────────────────────────────────────────────────────
+function renderLessonFeedback() {
+  const l       = LESSONS[state.currentLesson];
+  const correct = state.feedbackResult === 'correct';
+  const isLast  = state.currentLesson >= LESSONS.length - 1;
+
+  const panel = correct
+    ? `<div class="feedback-panel fp-correct">
+         <div class="fp-heading fp-correct">${t('correct')}</div>
+         <div class="fp-sub">${t('signed_success', l.title[state.lang])}</div>
+         <span class="xp-tag">+15 XP</span>
+       </div>`
+    : `<div class="feedback-panel fp-wrong">
+         <div class="fp-heading fp-wrong">${t('not_quite')}</div>
+         <div class="fp-sub">${t('watch_again')}</div>
+       </div>`;
+
+  const mainBtn = correct
+    ? (isLast
+        ? `<button class="btn btn-success" onclick="finishCourse()">${t('finish_course')}</button>`
+        : `<button class="btn btn-success" onclick="nextLesson()">${t('continue')}</button>`)
+    : `<button class="btn btn-primary" onclick="retryLesson()">${t('try_again')}</button>`;
+
+  return `
+  ${$topBar()}
+  ${$progressRow(100)}
+  <div class="page">
+    <div class="target-word" style="margin-bottom:20px;">${l.title[state.lang]}</div>
+    ${panel}
+    ${mainBtn}
+    <button class="btn btn-ghost mt-12" onclick="goHome()">${t('back_to_home')}</button>
+  </div>`;
+}
+
+// ── PRACTICE ──────────────────────────────────────────────────────────────────
+function renderPractice() {
+  return `
+  <div class="page" style="padding-top:20px;">
+    <div class="back-row">
+      <button class="round-btn" onclick="goHome()" aria-label="Back">✕</button>
+      <span class="back-title">${t('practice_mode')}</span>
+    </div>
+    ${$cameraBlock()}
+    <div class="live-row mt-12"><div class="live-dot"></div><span class="live-text">${t('camera_live')}</span></div>
+    ${$detectionCard()}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN RENDER
+═══════════════════════════════════════════════════════════════════════════ */
+const PAGES = {
+  'home':             renderHome,
+  'lesson-intro':     renderLessonIntro,
+  'lesson-active':    renderLessonActive,
+  'lesson-feedback':  renderLessonFeedback,
+  'practice':         renderPractice,
+};
+
+function render() {
+  const fn = PAGES[state.page] || renderHome;
+  document.getElementById('app').innerHTML = fn();
+  afterRender();
+}
+
+// Boot
+render();
+</script>
+</body>
+</html>

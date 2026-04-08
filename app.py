@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import base64
 import math
 import threading
@@ -7,6 +8,14 @@ from pathlib import Path
 import av
 import cv2
 import streamlit as st
+=======
+import time
+import av
+import threading
+from pathlib import Path
+import streamlit as st
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
 from streamlit_autorefresh import st_autorefresh
 from streamlit_webrtc import (
     RTCConfiguration,
@@ -15,7 +24,9 @@ from streamlit_webrtc import (
 )
 
 from sign_predictor import SignLanguagePredictor
+import cv2
 
+<<<<<<< HEAD
 
 st.set_page_config(
     page_title="Linguista",
@@ -119,9 +130,69 @@ FAIL_MESSAGES = [
     "Try again! 💪",
     "One more time! 🫶",
     "Keep going! ✨",
+=======
+# =========================
+# System Config & Paths
+# =========================
+st.set_page_config(
+    page_title="Linguista",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
+
+BASE_DIR = Path(__file__).parent
+DEMO_VIDEOS_DIR = BASE_DIR / "assets" / "demo_videos"
+
+RTC_CONFIGURATION = RTCConfiguration(
+    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+)
+
+# =========================
+# Global ML Resources
+# =========================
+@st.cache_resource
+def load_predictor():
+    return SignLanguagePredictor(confidence_threshold=0.2)
+
+
+# =========================
+# Session State Init
+# =========================
+def init_session_state():
+    defaults = {
+        "page": "home",  # home, lesson, practice
+        "xp": 0,
+        "streak": 3,
+        "lesson_index": 0,
+        "lesson_step": "intro",  # intro, active, feedback
+        "lesson_status": None,  # 'correct', 'try_again', None
+        "refresh_counter": 0,
+        "camera_key_counter": 0,
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+init_session_state()
+
+# =========================
+# Content Data
+# =========================
+LESSONS = [
+    {"target": "Hungry", "label": "Lesson 1: Basics", "video": DEMO_VIDEOS_DIR / "hungry.mp4"},
+    {"target": "Sleepy", "label": "Lesson 2: Feelings", "video": DEMO_VIDEOS_DIR / "sleepy.mp4"},
+    {"target": "Drink", "label": "Lesson 3: Actions", "video": DEMO_VIDEOS_DIR / "drink.mp4"},
+    {"target": "Yes", "label": "Lesson 4: Affirmations", "video": DEMO_VIDEOS_DIR / "yes.mp4"},
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
 ]
 
+# =========================
+# Navigation Functions
+# =========================
+def go_home():
+    st.session_state.page = "home"
 
+<<<<<<< HEAD
 # =========================
 # Navigation helpers
 # =========================
@@ -173,11 +244,283 @@ def card(title: str, body: str):
         <div class="card">
             <div class="card-title">{title}</div>
             <div class="card-body">{body}</div>
+=======
+def start_lesson(index):
+    st.session_state.lesson_index = index
+    st.session_state.lesson_step = "intro"
+    st.session_state.lesson_status = None
+    st.session_state.page = "lesson"
+    st.session_state.camera_key_counter += 1
+
+def start_practice():
+    st.session_state.page = "practice"
+    st.session_state.camera_key_counter += 1
+
+def advance_lesson_step(step):
+    st.session_state.lesson_step = step
+
+def complete_lesson(success):
+    st.session_state.lesson_step = "feedback"
+    if success:
+        st.session_state.lesson_status = "correct"
+        st.session_state.xp += 15
+    else:
+        st.session_state.lesson_status = "try_again"
+
+def next_lesson():
+    if st.session_state.lesson_index < len(LESSONS) - 1:
+        st.session_state.lesson_index += 1
+        st.session_state.lesson_step = "intro"
+        st.session_state.camera_key_counter += 1
+    else:
+        go_home()
+
+
+# =========================
+# CSS Styling (Minimalist Red/Warm)
+# =========================
+st.markdown(
+    """
+    <style>
+        :root {
+            --primary-color: #a96f72;
+            --primary-hover: #965f62;
+            --bg-color: #fdfaf6;
+            --card-bg: #ffffff;
+            --text-dark: #523f46;
+            --text-light: #9e8e92;
+            --accent-peach: #eba793;
+            --accent-green: #58cc02;
+            --border-color: #e5dbdb;
+        }
+        
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        [data-testid="stToolbar"] {display:none !important;}
+        [data-testid="collapsedControl"] {display:none !important;}
+
+        html, body, [class*="css"] {
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+        }
+
+        .stApp {
+            background-color: var(--bg-color);
+        }
+
+        .main .block-container {
+            max-width: 480px;
+            padding: 2rem 1rem;
+            margin: auto;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0 24px 0;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+
+        .stat-item span.icon {
+            margin-right: 6px;
+            font-size: 1.2rem;
+            color: var(--accent-peach);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 0 var(--border-color);
+            text-align: center;
+        }
+
+        .card-header {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: var(--text-light);
+            margin-bottom: 16px;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            color: var(--text-dark);
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .lesson-title {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .target-word {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 16px 0;
+            text-align: center;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            background-color: var(--border-color);
+            border-radius: 12px;
+            height: 16px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        /* Custom Buttons */
+        .stButton > button {
+            width: 100%;
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 12px 24px !important;
+            font-size: 1.1rem !important;
+            font-weight: 800 !important;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 var(--primary-hover) !important;
+            transition: transform 0.1s, box-shadow 0.1s !important;
+            margin-top: 8px;
+        }
+
+        .stButton > button:active {
+            transform: translateY(4px) !important;
+            box-shadow: 0 0 0 var(--primary-hover) !important;
+        }
+
+        .btn-secondary > button {
+            background-color: var(--bg-color) !important;
+            color: var(--text-dark) !important;
+            border: 2px solid var(--border-color) !important;
+            box-shadow: 0 4px 0 var(--border-color) !important;
+        }
+
+        .btn-secondary > button:active {
+            box-shadow: 0 0 0 var(--border-color) !important;
+        }
+
+        /* Feedback Panels */
+        .feedback-panel {
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.4rem;
+            margin-bottom: 24px;
+        }
+
+        .feedback-correct {
+            background-color: #d7ffb8;
+            color: #2b5900;
+            border: 2px solid #58cc02;
+        }
+
+        .feedback-incorrect {
+            background-color: #ffdfe0;
+            color: #a96f72;
+            border: 2px solid #a96f72;
+        }
+
+        video {
+            border-radius: 16px !important;
+            width: 100% !important;
+            max-width: 320px !important;
+            margin: 0 auto;
+            display: block;
+            border: 2px solid var(--border-color);
+        }
+
+        .instruction-text {
+            text-align: center;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# =========================
+# Video Processor
+# =========================
+class VideoProcessor(VideoProcessorBase):
+    def __init__(self):
+        self.predictor = load_predictor()
+        self.result = {
+            "prediction": "Connecting...",
+            "confidence": 0.0,
+            "is_confident": False,
+        }
+        self.lock = threading.Lock()
+
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        img = cv2.flip(img, 1)
+
+        try:
+            processed_frame, result = self.predictor.process_frame(img, draw_landmarks=True)
+            with self.lock:
+                self.result = result.copy()
+        except Exception:
+            processed_frame = img
+
+        return av.VideoFrame.from_ndarray(processed_frame, format="bgr24")
+
+
+# =========================
+# Component UI Helpers
+# =========================
+def render_top_bar():
+    st.markdown(
+        f"""
+        <div class="top-bar">
+            <div class="stat-item"><span class="icon">🔥</span>{st.session_state.streak}</div>
+            <div style="font-weight:900; font-size:1.4rem; color:var(--text-dark); letter-spacing:-0.5px;">Linguista</div>
+            <div class="stat-item"><span class="icon">💎</span>{st.session_state.xp}</div>
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+<<<<<<< HEAD
 
 def pill(text: str, cls: str = ""):
     st.markdown(
@@ -849,11 +1192,20 @@ if LOGO_PATH.exists():
             <div class="logo-image-box">
                 <img src="data:image/png;base64,{base64_logo()}" alt="Linguista logo">
             </div>
+=======
+def render_progress_bar(current, total):
+    percentage = int((current / total) * 100)
+    st.markdown(
+        f"""
+        <div class="progress-container">
+            <div class="progress-bar" style="width: {percentage}%;"></div>
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+<<<<<<< HEAD
 st.markdown(
     """
     <div class="top-brand">
@@ -972,10 +1324,43 @@ elif st.session_state.page == "demo":
                     <div class="top-item">
                         <span class="top-name">{item['label']}</span>
                         <span class="top-score">{item['confidence']:.3f}</span>
+=======
+# =========================
+# Page: Home
+# =========================
+def render_home():
+    render_top_bar()
+    
+    st.markdown("<h3>Your Course</h3>", unsafe_allow_html=True)
+
+    # Main Lessons Loop
+    for idx, lesson in enumerate(LESSONS):
+        is_locked = idx > st.session_state.lesson_index
+
+        if is_locked:
+            st.markdown(
+                f"""
+                <div class="card" style="opacity: 0.6; background-color: #f2eded;">
+                    <div class="card-header">Locked</div>
+                    <div class="card-desc">Complete previous lessons to unlock</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            if idx == st.session_state.lesson_index:
+                # Active Lesson
+                st.markdown(
+                    f"""
+                    <div class="card" style="border-color: var(--primary-color);">
+                        <div class="card-header">{lesson['label']}</div>
+                        <div class="card-desc">Practice signing: {lesson['target']}</div>
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
+<<<<<<< HEAD
         else:
             card("Warming up ⏳", "Hold your sign a little longer so the model can collect enough frames.")
 
@@ -1004,9 +1389,65 @@ elif st.session_state.page == "stage":
         if st.button("← Home", use_container_width=True):
             st.session_state.stage_index = 0
             reset_stage()
+=======
+                if st.button(f"Start Lesson {idx+1}", key=f"start_{idx}"):
+                    start_lesson(idx)
+                    st.rerun()
+            else:
+                # Completed Lesson
+                st.markdown(
+                    f"""
+                    <div class="card" style="border-color: #58cc02; background-color: #f7fff0;">
+                        <div class="card-header" style="color: #58cc02;">{lesson['label']} (Completed)</div>
+                        <div class="card-desc">Target: {lesson['target']}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.markdown('<div class="btn-secondary">', unsafe_allow_html=True)
+                if st.button("Review", key=f"rev_{idx}"):
+                    start_lesson(idx)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<hr style='margin: 32px 0;'>", unsafe_allow_html=True)
+    
+    st.markdown("<h3>Extra Practice</h3>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="card">
+            <div class="card-header">Practice Mode</div>
+            <div class="card-desc">Freestyle camera mode to test out your signs.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.markdown('<div class="btn-secondary">', unsafe_allow_html=True)
+    if st.button("Open Practice"):
+        start_practice()
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# =========================
+# Page: Lesson Flow
+# =========================
+def render_lesson():
+    lesson = LESSONS[st.session_state.lesson_index]
+    target_sign = lesson["target"]
+    video_path = lesson.get("video")
+
+    render_progress_bar(st.session_state.lesson_index, len(LESSONS))
+
+    col1, col2 = st.columns([0.2, 0.8])
+    with col1:
+        st.markdown('<div class="btn-secondary" style="margin-bottom:16px;">', unsafe_allow_html=True)
+        if st.button("X"):
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
             go_home()
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
+<<<<<<< HEAD
     with nav2:
         st.markdown(
             f"""
@@ -1039,10 +1480,55 @@ elif st.session_state.page == "stage":
     elif st.session_state.stage_status == "running":
         ctx = create_camera_stream(camera_key)
 
+=======
+    # 1. INTRO STEP
+    if st.session_state.lesson_step == "intro":
+        st.markdown(f'<div class="instruction-text">New word</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="target-word">{target_sign}</div>', unsafe_allow_html=True)
+        
+        if video_path and Path(video_path).exists():
+            st.video(str(video_path))
+        else:
+            st.markdown(
+                f"""
+                <div class="card" style="padding:40px;">
+                    <div class="card-desc">Demo clip missing 🎬<br>Add video to assets/demo_videos.</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.markdown("<div style='margin-top: 32px;'></div>", unsafe_allow_html=True)
+        if st.button("Let's Try It"):
+            advance_lesson_step("active")
+            st.rerun()
+
+    # 2. ACTIVE STEP
+    elif st.session_state.lesson_step == "active":
+        st_autorefresh(interval=1000, key="lesson_active_refresh")
+        
+        st.markdown(f'<div class="instruction-text">Sign this word:</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="target-word">{target_sign}</div>', unsafe_allow_html=True)
+
+        ctx = webrtc_streamer(
+            key=f"lesson_camera_{st.session_state.camera_key_counter}",
+            video_processor_factory=VideoProcessor,
+            rtc_configuration=RTC_CONFIGURATION,
+            media_stream_constraints={"video": {"facingMode": "user"}, "audio": False},
+            async_processing=True,
+        )
+
+        detected_sign = "Waiting..."
+        confidence = 0.0
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
         if ctx.video_processor:
             with ctx.video_processor.lock:
                 result = ctx.video_processor.result.copy()
+            detected_sign = result.get("prediction", "Waiting...")
+            confidence = result.get("confidence", 0.0)
+            is_confident = result.get("is_confident", False)
 
+<<<<<<< HEAD
             detected_sign = result.get("display_label") or result.get("prediction", "Collecting...")
             confidence = result.get("confidence", 0.0)
             is_confident = result.get("is_confident", False)
@@ -1115,11 +1601,88 @@ elif st.session_state.page == "stage":
             <div class="timer-box">
                 <div class="card-title">Status ✅</div>
                 <div class="timer-value" style="font-size:1.35rem;">Correct hand sign ✅</div>
+=======
+            # Auto-check logic
+            if str(detected_sign).lower() == str(target_sign).lower() and is_confident and confidence >= 0.70:
+                complete_lesson(success=True)
+                st.rerun()
+                
+        st.markdown(
+            f"""
+            <div class="card" style="margin-top: 16px;">
+                <div style="font-size: 0.9rem; color: var(--text-light);">Detected</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: var(--text-dark);">{detected_sign}</div>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
+        st.markdown('<div class="btn-secondary">', unsafe_allow_html=True)
+        if st.button("I can't do it now"):
+            complete_lesson(success=False)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 3. FEEDBACK STEP
+    elif st.session_state.lesson_step == "feedback":
+        st.markdown(f'<div class="target-word">{target_sign}</div>', unsafe_allow_html=True)
+        
+        if st.session_state.lesson_status == "correct":
+            st.markdown('<div class="feedback-panel feedback-correct">Correct!</div>', unsafe_allow_html=True)
+            if st.button("Continue"):
+                next_lesson()
+                st.rerun()
+        else:
+            st.markdown('<div class="feedback-panel feedback-incorrect">Let\'s try again later.</div>', unsafe_allow_html=True)
+            if st.button("Got it"):
+                go_home()
+                st.rerun()
+
+# =========================
+# Page: Practice Mode
+# =========================
+def render_practice():
+    col1, col2 = st.columns([0.2, 0.8])
+    with col1:
+        st.markdown('<div class="btn-secondary" style="margin-bottom:16px;">', unsafe_allow_html=True)
+        if st.button("X"):
+            go_home()
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<h3>Practice Mode</h3>", unsafe_allow_html=True)
+    st.markdown('<div class="instruction-text">Show a sign to the camera.</div>', unsafe_allow_html=True)
+
+    st_autorefresh(interval=1500, key="practice_refresh")
+
+    ctx = webrtc_streamer(
+        key=f"practice_camera_{st.session_state.camera_key_counter}",
+        video_processor_factory=VideoProcessor,
+        rtc_configuration=RTC_CONFIGURATION,
+        media_stream_constraints={"video": {"facingMode": "user"}, "audio": False},
+        async_processing=True,
+    )
+
+    if ctx.video_processor:
+        with ctx.video_processor.lock:
+            result = ctx.video_processor.result.copy()
+
+        detected_sign = result.get("display_label") or result.get("prediction", "Collecting...")
+        confidence = result.get("confidence", 0.0)
+
+        st.markdown(
+            f"""
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-desc">Current Detection</div>
+                <div class="target-word" style="margin-top:0;">{detected_sign}</div>
+                <div class="card-desc" style="margin-bottom:0;">Confidence: {confidence:.2f}</div>
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
             </div>
             """,
             unsafe_allow_html=True,
         )
 
+<<<<<<< HEAD
         st.markdown(
             f"""<div class="feedback-success">{st.session_state.stage_feedback}</div>""",
             unsafe_allow_html=True,
@@ -1180,3 +1743,14 @@ nav_html = f"""
 """
 
 st.markdown(nav_html, unsafe_allow_html=True)
+=======
+# =========================
+# Router
+# =========================
+if st.session_state.page == "home":
+    render_home()
+elif st.session_state.page == "lesson":
+    render_lesson()
+elif st.session_state.page == "practice":
+    render_practice()
+>>>>>>> 248cea2 (Update codebase with local sharing and FastAPI server)
