@@ -1,5 +1,5 @@
 @echo off
-echo Preparing to upload your real code to the new LINGUSTA2 repository...
+echo Preparing to forcefully upload your real code to the new LINGUSTA2 repository...
 
 :: Initialize Git if not already done
 git init
@@ -17,8 +17,8 @@ echo Committing everything...
 git commit -m "Upload real source code to LINGUSTA2"
 
 echo.
-echo Pushing to GitHub (this might take a second)...
-git push -u origin main
+echo Pushing to GitHub (Forcing overwrite of the empty commit)...
+git push -u origin main --force
 
 echo.
 echo Done! Your code is now live on https://github.com/AlexanderAyuwat/LINGUSTA2
